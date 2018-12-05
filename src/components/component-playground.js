@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import isEmpty from 'lodash/isEmpty';
+import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import styled, { css } from 'react-emotion';
 import { defaultCode } from '../utils/playground.default-code';
@@ -135,11 +134,7 @@ const PlaygroundError = styled(LiveError)`
 
 const STORAGE_KEY = 'spectacle-playground';
 
-function getEnhancedScope(scope = {}) {
-  return { Component, ...scope };
-}
-
-class ComponentPlayground extends Component {
+class ComponentPlayground extends PureComponent {
   constructor() {
     super(...arguments);
     this.onRef = this.onRef.bind(this);
@@ -148,22 +143,8 @@ class ComponentPlayground extends Component {
     this.syncCode = this.syncCode.bind(this);
 
     this.state = {
-      code: (this.props.code || defaultCode).trim(),
-      scope: getEnhancedScope(this.props.scope)
+      code: this.props.defaultCode
     };
-  }
-
-  static getDerivedStateFromProps(nextProps, prevState) {
-    const updatedState = {};
-    if (nextProps.code !== prevState.code) {
-      const code = (nextProps.code || defaultCode).trim();
-      updatedState.code = code;
-    }
-    if (nextProps.scope !== prevState.scope) {
-      const scope = getEnhancedScope(nextProps.scope);
-      updatedState.scope = scope;
-    }
-    return isEmpty(updatedState) ? null : updatedState;
   }
 
   componentDidMount() {
@@ -171,24 +152,10 @@ class ComponentPlayground extends Component {
     window.addEventListener('storage', this.syncCode);
   }
 
-  componentDidUpdate() {
-    this.playgroundSetState();
-  }
-
   componentWillUnmount() {
     window.removeEventListener('storage', this.syncCode);
   }
 
-  playgroundSetState() {
-    if (this.props.code) {
-      const code = (this.props.code || defaultCode).trim();
-      this.setState({ code });
-    }
-    if (this.props.scope) {
-      const scope = getEnhancedScope(this.props.scope);
-      this.setState({ scope });
-    }
-  }
   onKeyUp(evt) {
     evt.stopPropagation();
 
@@ -225,11 +192,13 @@ class ComponentPlayground extends Component {
     const {
       previewBackgroundColor,
       theme = 'dark',
-      transformCode
+      transformCode,
+      scope,
+      noInline
     } = this.props;
 
     const useDarkTheme = theme === 'dark';
-    const externalPrismTheme = this.props.theme === 'external';
+    const externalPrismTheme = theme === 'external';
     const className = `language-jsx ${
       externalPrismTheme ? '' : 'builtin-prism-theme'
     }`;
@@ -238,9 +207,9 @@ class ComponentPlayground extends Component {
       <PlaygroundProvider
         mountStylesheet={false}
         code={this.state.code}
-        scope={this.state.scope}
+        scope={scope}
         transformCode={transformCode}
-        noInline
+        noInline={noInline}
       >
         <PlaygroundRow>
           <Title>Live Preview</Title>
@@ -284,15 +253,18 @@ ComponentPlayground.contextTypes = {
 };
 
 ComponentPlayground.propTypes = {
-  code: PropTypes.string,
+  defaultCode: PropTypes.string,
   previewBackgroundColor: PropTypes.string,
   scope: PropTypes.object,
   theme: PropTypes.oneOf(['dark', 'light', 'external']),
-  transformCode: PropTypes.func
+  transformCode: PropTypes.func,
+  noInline: PropTypes.bool
 };
 
 ComponentPlayground.defaultProps = {
-  theme: 'dark'
+  theme: 'dark',
+  defaultCode,
+  noInline: true
 };
 
 export default ComponentPlayground;
